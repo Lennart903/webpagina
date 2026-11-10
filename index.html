@@ -1,40 +1,56 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <title>Garden Moisture Monitor</title>
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-</head>
-<body style="font-family: sans-serif; background: #121212; color: #fff; padding: 20px;">
-    <h2>🌱 Garden Soil Humidity</h2>
-    <div style="width: 80%; max-width: 800px; margin: auto;">
-        <canvas id="moistureChart"></canvas>
-    </div>
+<script>
+    const SUPABASE_URL = "https://xyzcompany.supabase.co/rest/v1/sensor_readings?select=*&order=created_at.desc&limit=20";
+    const SUPABASE_KEY = "JOUW_SUPABASE_KEY";
 
-    <script>
-        const SUPABASE_URL = "https://xyzcompany.supabase.co/rest/v1/sensor_readings?select=*&order=created_at.desc&limit=20";
-        const SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...";
-
-        const ctx = document.getElementById('moistureChart').getContext('2d');
-        const chart = new Chart(ctx, {
-            type: 'line',
-            data: { labels: [], datasets: [{ label: 'Soil Moisture (%)', data: [], borderColor: '#4CAF50', fill: false }] }
-        });
-
-        async function fetchData() {
-            const res = await fetch(SUPABASE_URL, {
-                headers: { 'apikey': SUPABASE_KEY, 'Authorization': 'Bearer ' + SUPABASE_KEY }
-            });
-            const data = await res.json();
-            data.reverse();
-
-            chart.data.labels = data.map(d => new Date(d.created_at).toLocaleTimeString());
-            chart.data.datasets[0].data = data.map(d => d.humidity);
-            chart.update();
+    const ctx = document.getElementById('moistureChart').getContext('2d');
+    const chart = new Chart(ctx, {
+        type: 'line',
+        data: { 
+            labels: [], 
+            datasets: [{ 
+                label: 'Soil Moisture (%)', 
+                data: [], 
+                borderColor: '#4CAF50', 
+                backgroundColor: 'rgba(76, 175, 80, 0.1)',
+                fill: true 
+            }] 
+        },
+        options: {
+            responsive: true,
+            scales: {
+                y: { beginAtZero: true, max: 100 }
+            }
         }
+    });
 
-        fetchData();
-        setInterval(fetchData, 10000); // Refresh graph every 10 seconds
-    </script>
-</body>
-</html>
+    async function fetchData() {
+        try {
+            const res = await fetch(SUPABASE_URL, {
+                headers: { 
+                    'apikey': SUPABASE_KEY 
+                }
+            });
+
+            const data = await res.json();
+
+            // Als Supabase een foutmelding geeft, is data geen Array
+            if (!Array.isArray(data)) {
+                console.error("Supabase API Fout:", data);
+                return;
+            }
+
+            // Maak een kopie en keer de volgorde om (oudste links, nieuwste rechts)
+            const sortedData = [...data].reverse();
+
+            chart.data.labels = sortedData.map(d => d.created_at ? new Date(d.created_at).toLocaleTimeString() : '');
+            chart.data.datasets[0].data = sortedData.map(d => d.humidity);
+            chart.update();
+
+        } catch (err) {
+            console.error("Netwerkfout bij ophalen data:", err);
+        }
+    }
+
+    fetchData();
+    setInterval(fetchData, 10000); // Ververs elke 10 seconden
+</script>
