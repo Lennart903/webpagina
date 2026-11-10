@@ -1,56 +1,76 @@
-<script>
-    const SUPABASE_URL = "https://tniockgjahhdubpfjlaa.supabase.co";
-    const SUPABASE_KEY = "sb_publishable__wl-rKNf318hez_4VhidgQ_RzDIQ4IF";
+<!DOCTYPE html>
+<html lang="nl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Garden Moisture Monitor</title>
+    <!-- Chart.js bibliotheek -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+<body style="font-family: sans-serif; background: #121212; color: #fff; padding: 20px;">
 
-    const ctx = document.getElementById('moistureChart').getContext('2d');
-    const chart = new Chart(ctx, {
-        type: 'line',
-        data: { 
-            labels: [], 
-            datasets: [{ 
-                label: 'Soil Moisture (%)', 
-                data: [], 
-                borderColor: '#4CAF50', 
-                backgroundColor: 'rgba(76, 175, 80, 0.1)',
-                fill: true 
-            }] 
-        },
-        options: {
-            responsive: true,
-            scales: {
-                y: { beginAtZero: true, max: 100 }
-            }
-        }
-    });
+    <h2 style="text-align: center;">🌱 Tuin Bodemvochtigheid</h2>
 
-    async function fetchData() {
-        try {
-            const res = await fetch(SUPABASE_URL, {
-                headers: { 
-                    'apikey': SUPABASE_KEY 
+    <div style="width: 90%; max-width: 800px; margin: 0 auto;">
+        <canvas id="moistureChart"></canvas>
+    </div>
+
+    <script>
+        // Supabase REST API URL (aangevuld met het tabelpad en de selectie-parameters)
+        const SUPABASE_URL = "https://tniockgjahhdubpfjlaa.supabase.co/rest/v1/sensor_readings?select=*&order=created_at.desc&limit=20";
+        const SUPABASE_KEY = "sb_publishable__wl-rKNf318hez_4VhidgQ_RzDIQ4IF";
+
+        const ctx = document.getElementById('moistureChart').getContext('2d');
+        const chart = new Chart(ctx, {
+            type: 'line',
+            data: { 
+                labels: [], 
+                datasets: [{ 
+                    label: 'Bodemvochtigheid (%)', 
+                    data: [], 
+                    borderColor: '#4CAF50', 
+                    backgroundColor: 'rgba(76, 175, 80, 0.1)',
+                    fill: true 
+                }] 
+            },
+            options: {
+                responsive: true,
+                scales: {
+                    y: { beginAtZero: true, max: 100 }
                 }
-            });
-
-            const data = await res.json();
-
-            // Als Supabase een foutmelding geeft, is data geen Array
-            if (!Array.isArray(data)) {
-                console.error("Supabase API Fout:", data);
-                return;
             }
+        });
 
-            // Maak een kopie en keer de volgorde om (oudste links, nieuwste rechts)
-            const sortedData = [...data].reverse();
+        async function fetchData() {
+            try {
+                const res = await fetch(SUPABASE_URL, {
+                    headers: { 
+                        'apikey': SUPABASE_KEY 
+                    }
+                });
 
-            chart.data.labels = sortedData.map(d => d.created_at ? new Date(d.created_at).toLocaleTimeString() : '');
-            chart.data.datasets[0].data = sortedData.map(d => d.humidity);
-            chart.update();
+                const data = await res.json();
 
-        } catch (err) {
-            console.error("Netwerkfout bij ophalen data:", err);
+                // Als Supabase een foutmelding geeft, is data geen Array
+                if (!Array.isArray(data)) {
+                    console.error("Supabase API Fout:", data);
+                    return;
+                }
+
+                // Keer de volgorde om (oudste links, nieuwste rechts)
+                const sortedData = [...data].reverse();
+
+                chart.data.labels = sortedData.map(d => d.created_at ? new Date(d.created_at).toLocaleTimeString() : '');
+                chart.data.datasets[0].data = sortedData.map(d => d.humidity);
+                chart.update();
+
+            } catch (err) {
+                console.error("Netwerkfout bij ophalen data:", err);
+            }
         }
-    }
 
-    fetchData();
-    setInterval(fetchData, 10000); // Ververs elke 10 seconden
-</script>
+        fetchData();
+        setInterval(fetchData, 10000); // Ververs elke 10 seconden
+    </script>
+</body>
+</html>
